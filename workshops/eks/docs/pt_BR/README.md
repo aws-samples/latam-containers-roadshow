@@ -1010,18 +1010,18 @@ Vamos alterar o`replicaCount`no aplicativo nginx que foi implantado pelo flux.
 kubectl get pods -napp1
 ```
 
-> **_NOTA:_**Este aplicativo é um exemplo de nginx implantado pelo flux, o manifesto deste aplicativo já está em nosso repositório bifurcado.
+> **_NOTA:_** Este aplicativo é um exemplo de nginx implantado pelo flux, o manifesto deste aplicativo já está em nosso repositório bifurcado.
 
 2.  Altere a contagem de réplicas do nosso aplicativo, vamos clonar nosso novo repositório GitHub bifurcado:
 
 ```bash
-git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/${GITHUB_USER}/latam-containers-roadshow latam-containers-roadshow-${GITHUB_USER}
+git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/${GITHUB_USER}/latam-containers-roadshow ~/environment/latam-containers-roadshow-${GITHUB_USER}
 ```
 
 3.  Agora que o repositório está clonado, vamos alterar a quantidade de réplicas no manifesto da nossa aplicação:
 
 ```bash
-cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/
+cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/
 ```
 
 4.  Abrir`app1.yaml`arquivo e altere o`replicaCount`a partir de`2`para`1`:
