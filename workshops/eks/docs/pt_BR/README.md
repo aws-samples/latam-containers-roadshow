@@ -395,6 +395,15 @@ kubectl delete deployment php-apache
 kubectl delete pod load-generator
 
 helm uninstall kube-ops-view
+
+export ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='eks:cluster-name') && Value=='latam-containers-roadshow']].AutoScalingGroupName" --output text)
+
+aws autoscaling \
+    update-auto-scaling-group \
+    --auto-scaling-group-name ${ASG_NAME} \
+    --min-size 2 \
+    --desired-capacity 2 \
+    --max-size 2
 ```
 
 # Computação Flexível com Karpenter
