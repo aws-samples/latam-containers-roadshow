@@ -865,8 +865,9 @@ echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
 
 3.  Instale o Flux CLI:
 
-
-    curl -s https://fluxcd.io/install.sh | sudo bash
+```bash
+curl -s https://fluxcd.io/install.sh | sudo bash
+```
 
 4.  Verifique se você tem tudo o que é necessário para executar o Flux executando o seguinte comando:
 
