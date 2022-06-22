@@ -120,6 +120,8 @@ Antes de começar a aprender sobre as várias opções de dimensionamento autom�
 Kube-ops-view fornece uma imagem operacional comum para um cluster Kubernetes que ajuda a entender nossa configuração de cluster de maneira visual.
 
 ```bash
+helm repo add stable https://charts.helm.sh/stable
+
 helm install kube-ops-view \
 stable/kube-ops-view \
 --set service.type=LoadBalancer \
