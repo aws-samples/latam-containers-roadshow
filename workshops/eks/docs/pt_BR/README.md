@@ -94,7 +94,7 @@ Os detalhes do cluster EKS podem ser extraídos da saída do terraform ou do Con
 `~/.kube/config`arquivo é atualizado com detalhes do cluster e certificado do comando abaixo
 
 ```bash
-aws eks --region us-east-1 update-kubeconfig --name ${CLUSTER_NAME}
+aws eks --region ${AWS_REGION} update-kubeconfig --name ${CLUSTER_NAME}
 ```
 
 ### Etapa 6: Liste todos os nós do trabalhador executando o comando abaixo
