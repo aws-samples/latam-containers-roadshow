@@ -861,7 +861,7 @@ echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" | tee -a ~/.bash_profile
 echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
 ```
 
-> **_NOTA:_**Para criar seu token de acesso pessoal do GitHub, siga as instruções de[esse link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
+> **_NOTA:_** Para criar seu token de acesso pessoal do GitHub, siga as instruções de[esse link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 3.  Instale o Flux CLI:
 
