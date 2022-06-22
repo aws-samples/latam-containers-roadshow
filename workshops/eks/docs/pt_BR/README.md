@@ -693,6 +693,8 @@ Como o novo nó não possui pods em execução, o Karpenter removerá o nó. Obs
 watch kubectl get nodes
 ```
 
+## Desimplantar o Karpenter
+
 Vamos desabilitar o Karpenter em nosso cluster EKS usando o terraform. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf` e definir `enable_karpenter`a partir de`true`para`false`:
 
 ```terraform
@@ -851,12 +853,13 @@ Neste módulo do workshop vamos configurar[CD de fluxo](https://fluxcd.io)em nos
 
 2.  Exporte seu token de acesso pessoal e nome de usuário do GitHub:
 
+```bash
+export GITHUB_TOKEN=<your-token>
+export GITHUB_USER=<your-username>
 
-    export GITHUB_TOKEN=<your-token>
-    export GITHUB_USER=<your-username>
-
-    echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" | tee -a ~/.bash_profile
-    echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
+echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" | tee -a ~/.bash_profile
+echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
+```
 
 > **_NOTA:_**Para criar seu token de acesso pessoal do GitHub, siga as instruções de[esse link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
