@@ -45,6 +45,7 @@ echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
 echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
 echo "export AZS=(${AZS[@]})" | tee -a ~/.bash_profile
 echo "export CLUSTER_NAME=${CLUSTER_NAME}" | tee -a ~/.bash_profile
+echo "export TF_VAR_aws_region=${TF_VAR_aws_region}" | tee -a ~/.bash_profile
 aws configure set default.region ${AWS_REGION}
 aws configure get default.region
 ```
