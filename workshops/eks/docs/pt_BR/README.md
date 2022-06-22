@@ -1091,7 +1091,7 @@ Para exemplificar o deploy de uma nova aplicação vamos utilizar um[exemplo de 
 1.  Criando os manifestos Namespace, Deployment e Service:
 
 ```bash
-cat <<EoF> ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/hello-world-flux.yaml
+cat <<EoF> ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/hello-world-flux.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
