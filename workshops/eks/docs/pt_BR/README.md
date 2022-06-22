@@ -437,6 +437,21 @@ module "eks_blueprints_kubernetes_addons" {
 }
 ```
 
+Agora, diminua a capacidade máxima para 2 instâncias. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf`arquivo e atualize o`max_size`de 4 para 2, você terá seu manifesto assim:
+
+```terraform
+managed_node_groups = {
+    mg_5 = {
+      node_group_name = "managed-ondemand"
+      instance_types  = ["m5.large"]
+      desired_size = 2
+      max_size     = 2
+      min_size     = 2
+      subnet_ids      = module.vpc.private_subnets
+    }
+  }
+```
+
 ### Executar o PLANO do Terraform
 
 Verifique os recursos criados por esta execução
