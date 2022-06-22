@@ -1154,7 +1154,7 @@ git push origin main
 4.  Adicione a referência do novo arquivo criado em nosso`kustomization.yaml`:
 
 ```bash
-cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/
+cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/
 ```
 
 Adicione a linha`hello-world-flux.yaml`em`kustomization.yaml`manifest, deve ficar como abaixo:
