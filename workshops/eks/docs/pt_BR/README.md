@@ -693,6 +693,52 @@ Como o novo nó não possui pods em execução, o Karpenter removerá o nó. Obs
 watch kubectl get nodes
 ```
 
+Vamos desabilitar o Karpenter em nosso cluster EKS usando o terraform. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf` e definir `enable_karpenter`a partir de`true`para`false`:
+
+```terraform
+module "eks_blueprints_kubernetes_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.0.7"
+
+  eks_cluster_id = module.eks_blueprints.eks_cluster_id
+
+  # EKS Managed Add-ons
+  enable_amazon_eks_vpc_cni    = true
+  enable_amazon_eks_coredns    = true
+  enable_amazon_eks_kube_proxy = true
+
+  # Add-ons
+  enable_aws_load_balancer_controller = true
+  enable_metrics_server               = true
+  enable_cluster_autoscaler           = false
+  enable_karpenter                    = false # Disable Karpenter
+  enable_aws_cloudwatch_metrics       = false
+  enable_aws_for_fluentbit            = false
+  
+  tags = local.tags
+
+  depends_on = [module.eks_blueprints.managed_node_groups]
+}
+```
+
+### Executar o PLANO do Terraform
+
+Verifique os recursos criados por esta execução
+
+```bash
+cd ~/environment/latam-containers-roadshow/workshops/eks/terraform/
+terraform plan
+```
+
+### Por fim, o Terraform APPLY
+
+para remover o Karpenter
+
+```bash
+terraform apply --auto-approve
+```
+
+Fazer isso removerá o Karpenter e todos os recursos relacionados do nosso cluster.
+
 # Observabilidade com o Amazon Cloudwatch Container Insights
 
 Neste módulo, aprenderemos e aproveitaremos o novo CloudWatch Container Insights para ver como você pode usar os recursos nativos do CloudWatch para monitorar o desempenho do seu cluster EKS.
