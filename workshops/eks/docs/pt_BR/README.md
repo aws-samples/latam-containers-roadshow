@@ -35,6 +35,7 @@ export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
 export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
 export AZS=($(aws ec2 describe-availability-zones --query 'AvailabilityZones[].ZoneName' --output text --region $AWS_REGION))
 export CLUSTER_NAME='latam-containers-roadshow'
+export TF_VAR_aws_region="${AWS_REGION}"
 ```
 
 Coloque no perfil do bash
@@ -44,6 +45,7 @@ echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
 echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
 echo "export AZS=(${AZS[@]})" | tee -a ~/.bash_profile
 echo "export CLUSTER_NAME=${CLUSTER_NAME}" | tee -a ~/.bash_profile
+echo "export TF_VAR_aws_region=${TF_VAR_aws_region}" | tee -a ~/.bash_profile
 aws configure set default.region ${AWS_REGION}
 aws configure get default.region
 ```
@@ -92,7 +94,7 @@ Os detalhes do cluster EKS podem ser extraídos da saída do terraform ou do Con
 `~/.kube/config`arquivo é atualizado com detalhes do cluster e certificado do comando abaixo
 
 ```bash
-aws eks --region us-east-1 update-kubeconfig --name ${CLUSTER_NAME}
+aws eks --region ${AWS_REGION} update-kubeconfig --name ${CLUSTER_NAME}
 ```
 
 ### Etapa 6: Liste todos os nós do trabalhador executando o comando abaixo
@@ -118,6 +120,8 @@ Antes de começar a aprender sobre as várias opções de dimensionamento autom�
 Kube-ops-view fornece uma imagem operacional comum para um cluster Kubernetes que ajuda a entender nossa configuração de cluster de maneira visual.
 
 ```bash
+helm repo add stable https://charts.helm.sh/stable
+
 helm install kube-ops-view \
 stable/kube-ops-view \
 --set service.type=LoadBalancer \
@@ -391,6 +395,15 @@ kubectl delete deployment php-apache
 kubectl delete pod load-generator
 
 helm uninstall kube-ops-view
+
+export ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='eks:cluster-name') && Value=='latam-containers-roadshow']].AutoScalingGroupName" --output text)
+
+aws autoscaling \
+    update-auto-scaling-group \
+    --auto-scaling-group-name ${ASG_NAME} \
+    --min-size 2 \
+    --desired-capacity 2 \
+    --max-size 2
 ```
 
 # Computação Flexível com Karpenter
@@ -422,6 +435,21 @@ module "eks_blueprints_kubernetes_addons" {
 
   depends_on = [module.eks_blueprints.managed_node_groups]
 }
+```
+
+Agora, diminua a capacidade máxima para 2 instâncias. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf`arquivo e atualize o`max_size`de 4 para 2, você terá seu manifesto assim:
+
+```terraform
+managed_node_groups = {
+    mg_5 = {
+      node_group_name = "managed-ondemand"
+      instance_types  = ["m5.large"]
+      desired_size = 2
+      max_size     = 2
+      min_size     = 2
+      subnet_ids      = module.vpc.private_subnets
+    }
+  }
 ```
 
 ### Executar o PLANO do Terraform
@@ -665,6 +693,54 @@ Como o novo nó não possui pods em execução, o Karpenter removerá o nó. Obs
 watch kubectl get nodes
 ```
 
+## Desimplantar o Karpenter
+
+Vamos desabilitar o Karpenter em nosso cluster EKS usando o terraform. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf` e definir `enable_karpenter`a partir de`true`para`false`:
+
+```terraform
+module "eks_blueprints_kubernetes_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.0.7"
+
+  eks_cluster_id = module.eks_blueprints.eks_cluster_id
+
+  # EKS Managed Add-ons
+  enable_amazon_eks_vpc_cni    = true
+  enable_amazon_eks_coredns    = true
+  enable_amazon_eks_kube_proxy = true
+
+  # Add-ons
+  enable_aws_load_balancer_controller = true
+  enable_metrics_server               = true
+  enable_cluster_autoscaler           = false
+  enable_karpenter                    = false # Disable Karpenter
+  enable_aws_cloudwatch_metrics       = false
+  enable_aws_for_fluentbit            = false
+  
+  tags = local.tags
+
+  depends_on = [module.eks_blueprints.managed_node_groups]
+}
+```
+
+### Executar o PLANO do Terraform
+
+Verifique os recursos criados por esta execução
+
+```bash
+cd ~/environment/latam-containers-roadshow/workshops/eks/terraform/
+terraform plan
+```
+
+### Por fim, o Terraform APPLY
+
+para remover o Karpenter
+
+```bash
+terraform apply --auto-approve
+```
+
+Fazer isso removerá o Karpenter e todos os recursos relacionados do nosso cluster.
+
 # Observabilidade com o Amazon Cloudwatch Container Insights
 
 Neste módulo, aprenderemos e aproveitaremos o novo CloudWatch Container Insights para ver como você pode usar os recursos nativos do CloudWatch para monitorar o desempenho do seu cluster EKS.
@@ -777,19 +853,21 @@ Neste módulo do workshop vamos configurar[CD de fluxo](https://fluxcd.io)em nos
 
 2.  Exporte seu token de acesso pessoal e nome de usuário do GitHub:
 
+```bash
+export GITHUB_TOKEN=<your-token>
+export GITHUB_USER=<your-username>
 
-    export GITHUB_TOKEN=<your-token>
-    export GITHUB_USER=<your-username>
+echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" | tee -a ~/.bash_profile
+echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
+```
 
-    echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" | tee -a ~/.bash_profile
-    echo "export GITHUB_USER=${GITHUB_USER}" | tee -a ~/.bash_profile
-
-> **_NOTA:_**Para criar seu token de acesso pessoal do GitHub, siga as instruções de[esse link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
+> **_NOTA:_** Para criar seu token de acesso pessoal do GitHub, siga as instruções de[esse link](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 3.  Instale o Flux CLI:
 
-
-    curl -s https://fluxcd.io/install.sh | sudo bash
+```bash
+curl -s https://fluxcd.io/install.sh | sudo bash
+```
 
 4.  Verifique se você tem tudo o que é necessário para executar o Flux executando o seguinte comando:
 
@@ -811,7 +889,7 @@ A saída é semelhante a:
 flux bootstrap github \
   --owner=${GITHUB_USER} \
   --repository=latam-containers-roadshow \
-  --path=./eks/fluxcd-examples/clusters/my-cluster/ \
+  --path=./workshops/eks/fluxcd-examples/clusters/my-cluster/ \
   --read-write-key \
   --branch=main \
   --namespace=flux-system \
@@ -932,18 +1010,18 @@ Vamos alterar o`replicaCount`no aplicativo nginx que foi implantado pelo flux.
 kubectl get pods -napp1
 ```
 
-> **_NOTA:_**Este aplicativo é um exemplo de nginx implantado pelo flux, o manifesto deste aplicativo já está em nosso repositório bifurcado.
+> **_NOTA:_** Este aplicativo é um exemplo de nginx implantado pelo flux, o manifesto deste aplicativo já está em nosso repositório bifurcado.
 
 2.  Altere a contagem de réplicas do nosso aplicativo, vamos clonar nosso novo repositório GitHub bifurcado:
 
 ```bash
-git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/${GITHUB_USER}/latam-containers-roadshow latam-containers-roadshow-${GITHUB_USER}
+git clone https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/${GITHUB_USER}/latam-containers-roadshow ~/environment/latam-containers-roadshow-${GITHUB_USER}
 ```
 
 3.  Agora que o repositório está clonado, vamos alterar a quantidade de réplicas no manifesto da nossa aplicação:
 
 ```bash
-cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/
+cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/
 ```
 
 4.  Abrir`app1.yaml`arquivo e altere o`replicaCount`a partir de`2`para`1`:
@@ -1013,7 +1091,7 @@ Para exemplificar o deploy de uma nova aplicação vamos utilizar um[exemplo de 
 1.  Criando os manifestos Namespace, Deployment e Service:
 
 ```bash
-cat <<EoF> ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/hello-world-flux.yaml
+cat <<EoF> ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/hello-world-flux.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -1076,7 +1154,7 @@ git push origin main
 4.  Adicione a referência do novo arquivo criado em nosso`kustomization.yaml`:
 
 ```bash
-cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/eks/fluxcd-examples/apps/
+cd ~/environment/latam-containers-roadshow-${GITHUB_USER}/workshops/eks/fluxcd-examples/apps/
 ```
 
 Adicione a linha`hello-world-flux.yaml`em`kustomization.yaml`manifest, deve ficar como abaixo:

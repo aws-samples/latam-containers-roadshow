@@ -4,3 +4,7 @@ variable "cluster_name" {
   type        = string
   default     = ""
 }
+
+variable "aws_region" {
+  type = string
+}

@@ -8,6 +8,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./eks/fluxcd-examples/apps
+  path: ./workshops/eks/fluxcd-examples/apps
   prune: true
   validation: client
