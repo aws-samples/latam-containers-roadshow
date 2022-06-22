@@ -889,7 +889,7 @@ A saída é semelhante a:
 flux bootstrap github \
   --owner=${GITHUB_USER} \
   --repository=latam-containers-roadshow \
-  --path=./eks/fluxcd-examples/clusters/my-cluster/ \
+  --path=./workshops/eks/fluxcd-examples/clusters/my-cluster/ \
   --read-write-key \
   --branch=main \
   --namespace=flux-system \
