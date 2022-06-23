@@ -1,11 +1,11 @@
 # LATAM Containers Roadshow - Workshop de Amazon EKS
 
-Neste workshop, exploraremos várias maneiras de configurar VPC, ALB e EC2 Kubernetes DataPlane Nodes e Amazon Elastic Kubernetes Service (EKS).
+Neste workshop, exploraremos várias maneiras de configurar VPC, ALB, EC2 Kubernetes DataPlane Nodes e Amazon Elastic Kubernetes Service (EKS).
 
 # Módulos
 
 -   Provisionando seu cluster EKS
--   Autoescaladores de cluster
+-   Cluster Autoscaler
 -   Melhor estratégia de escala com Karpenter
     -   Uso de instâncias Graviton e Spot para reduzir custos
 -   Observabilidade com o Amazon CloudWatch Container Insights
@@ -13,22 +13,22 @@ Neste workshop, exploraremos várias maneiras de configurar VPC, ALB e EC2 Kuber
 
 # Começando
 
-Utilizando o terminal integrado do ambiente AWS Cloud9, execute as etapas a seguir:
+Utilize o terminal integrado do ambiente AWS Cloud9 para executar as etapas a seguir:
 
-### Desabilitar credenciais temporárias gerenciadas pela AWS
+### Desabilite as credenciais temporárias gerenciadas pela AWS
 
 ```bash
 aws cloud9 update-environment  --environment-id $C9_PID --managed-credentials-action DISABLE
 rm -vf ${HOME}/.aws/credentials
 ```
 
-### Criar função vinculada ao serviço spot
+### Crie uma Spot Linked Role
 
 ```bash
 aws iam create-service-linked-role --aws-service-name spot.amazonaws.com
 ```
 
-### Exportar variáveis ​​úteis
+### Exporte variáveis ​​que serão utilizadas pelo workshop. 
 
 ```bash
 export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
@@ -38,7 +38,7 @@ export CLUSTER_NAME='latam-containers-roadshow'
 export TF_VAR_aws_region="${AWS_REGION}"
 ```
 
-Coloque no perfil do bash
+Exporte as variáveis no perfil do bash
 
 ```bash
 echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
@@ -52,7 +52,7 @@ aws configure get default.region
 
 # Provisionando seu cluster EKS
 
-Para a provisão de cluster, vamos usar [**EKS Blueprints**](https://aws.amazon.com/blogs/containers/bootstrapping-clusters-with-eks-blueprints/). EKS Blueprints é uma coleção de módulos de infraestrutura como código (IaC) que o ajudarão a configurar e implantar clusters EKS consistentes e com baterias incluídas em contas e regiões. Você pode usar EKS Blueprints para inicializar facilmente um cluster EKS com complementos do Amazon EKS, bem como uma ampla variedade de complementos populares de código aberto, incluindo Prometheus, Karpenter, Nginx, Traefik, AWS Load Balancer Controller, Fluent Bit, Keda , Argo CD e muito mais. O EKS Blueprints também ajuda a implementar controles de segurança relevantes necessários para operar cargas de trabalho de várias equipes no mesmo cluster.
+Para o provisionamento do cluster, vamos usar o [**EKS Blueprints**](https://aws.amazon.com/blogs/containers/bootstrapping-clusters-with-eks-blueprints/). EKS Blueprints é uma coleção de módulos de infraestrutura como código (IaC) que ajuda a configurar e implantar clusters EKS consistentes e com addons instalados. Você pode usar EKS Blueprints para inicializar facilmente um cluster EKS com addons do Amazon EKS, bem como uma ampla variedade de addons populares de código aberto, incluindo Prometheus, Karpenter, Nginx, Traefik, AWS Load Balancer Controller, Fluent Bit, Keda , Argo CD e muito mais. O EKS Blueprints também ajuda a implementar controles de segurança relevantes necessários para operar cargas de trabalho de várias equipes no mesmo cluster.
 
 ### Etapa 1: clone o repositório usando o comando abaixo
 
@@ -87,35 +87,35 @@ terraform apply --auto-approve
 
 ## Configurar o kubectl e testar o cluster
 
-Os detalhes do cluster EKS podem ser extraídos da saída do terraform ou do Console AWS para obter o nome do cluster. Este comando a seguir usado para atualizar o kubeconfig em sua máquina local onde você executa comandos kubectl para interagir com seu cluster EKS.
+Os detalhes do cluster EKS podem ser extraídos da saída do terraform ou do Console AWS para obter o nome do cluster. O comando a seguir atualiza o kubeconfig em sua máquina local onde você executa comandos kubectl para interagir com seu cluster EKS.
 
 ### Etapa 5: execute o comando update-kubeconfig
 
-`~/.kube/config`arquivo é atualizado com detalhes do cluster e certificado do comando abaixo
+`~/.kube/config`arquivo é atualizado com detalhes do cluster:
 
 ```bash
 aws eks --region ${AWS_REGION} update-kubeconfig --name ${CLUSTER_NAME}
 ```
 
-### Etapa 6: Liste todos os nós do trabalhador executando o comando abaixo
+### Etapa 6: Liste todos os worker nodes executando o comando abaixo
 
 ```bash
 kubectl get nodes
 ```
 
-# Autoescalador de cluster
+# Cluster Autoscaler
 
-Neste módulo, mostraremos padrões para dimensionar seus nós do trabalhador e implementações de aplicativos automaticamente.
+Neste módulo, mostraremos padrões para dimensionar seus worker nodes e implementações de aplicativos automaticamente.
 
 O dimensionamento automático no K8s vem em duas formas:
 
--   **Autoescalador de pod horizontal (HPA)** dimensiona os pods em uma implantação ou conjunto de réplicas. Ele é implementado como um recurso de API K8s e um controlador. O gerenciador do controlador consulta a utilização do recurso em relação às métricas especificadas em cada definição do HorizontalPodAutoscaler. Ele obtém as métricas da API de métricas de recursos (para métricas de recursos por pod) ou da API de métricas personalizadas (para todas as outras métricas).
+-   **Horizontal Pod Autoscaling (HPA)** dimensiona os pods em uma implantação ou conjunto de réplicas. Ele é implementado como um recurso de API K8s e um controlador. O gerenciador do controlador consulta a utilização do recurso em relação às métricas especificadas em cada definição do HorizontalPodAutoscaler. Ele obtém as métricas da API de métricas de recursos (para métricas de recursos por pod) ou da API de métricas personalizadas (para todas as outras métricas).
 
--   **Autoescalador de cluster (CA)** um componente que ajusta automaticamente o tamanho de um cluster Kubernetes para que todos os pods tenham um local para execução e não haja nós desnecessários.
+-   **Cluster AutoScaler (CA)** é um componente que ajusta automaticamente o tamanho de um cluster Kubernetes para que todos os pods tenham um local para execução e não haja nós desnecessários.
 
 ## Instalar kube-ops-view
 
-Antes de começar a aprender sobre as várias opções de dimensionamento automático para seu cluster EKS, vamos instalar [Kube-ops-view](https://github.com/hjacobs/kube-ops-view)a partir de [Henning Jacobs](https://github.com/hjacobs).
+Antes de começar a aprender sobre as várias opções de dimensionamento automático para seu cluster EKS, vamos instalar o [Kube-ops-view](https://github.com/hjacobs/kube-ops-view) a partir de [Henning Jacobs](https://github.com/hjacobs).
 
 Kube-ops-view fornece uma imagem operacional comum para um cluster Kubernetes que ajuda a entender nossa configuração de cluster de maneira visual.
 
@@ -128,7 +128,7 @@ stable/kube-ops-view \
 --set rbac.create=True
 ```
 
-Para verificar se o gráfico foi instalado com sucesso:
+Para verificar se o chart foi instalado com sucesso:
 
 ```bash
 helm list
@@ -155,7 +155,7 @@ Isso exibirá uma linha semelhante a Kube-ops-view URL = http&#x3A;//&lt;URL_PRE
 
 ## Dimensionar um aplicativo com HPA
 
-Para aplicativos de escala com HPA precisaremos do servidor de métricas instalado em nosso cluster, já o instalamos usando os blueprints EKS com terraform mostrados abaixo:
+Para aplicativos de escalabilidade com HPA, precisaremos do servidor de métricas instalado em nosso cluster. Ele já foi instalado usando os blueprints EKS com terraform conforme mostrado abaixo:
 
 ```terraform
 # Add-ons
@@ -163,7 +163,7 @@ Para aplicativos de escala com HPA precisaremos do servidor de métricas instala
   enable_metrics_server               = true
 ```
 
-### Implantar um aplicativo de amostra
+### Implantar um aplicativo de exemplo
 
 Vamos implantar um aplicativo e expor como um serviço na porta TCP 80.
 
@@ -224,7 +224,7 @@ Agora você pode parar (Ctrl + C) o teste de carga que estava sendo executado no
 
 ## Configurar o escalonador automático de cluster (CA)
 
-O Cluster Autoscaler for AWS oferece integração com grupos de Auto Scaling. Ele permite que os usuários escolham entre quatro opções diferentes de implantação:
+O Cluster Autoscaler para AWS oferece integração com grupos de Auto Scaling. Ele permite que os usuários escolham entre quatro opções diferentes de implantação:
 
     One Auto Scaling group
     Multiple Auto Scaling groups
@@ -294,7 +294,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 ```
 
-### Executar o PLANO do Terraform
+### Executar o PLAN do Terraform
 
 Verifique os recursos criados por esta execução
 
@@ -317,9 +317,9 @@ Observe os logs para verificar se o Cluster Autoscaler foi implantado com êxito
 kubectl -n kube-system logs -f deployment/cluster-autoscaler-aws-cluster-autoscaler
 ```
 
-## Crie um aplicativo de amostra para testar a CA
+## Crie um aplicativo de exemplo para testar o CA
 
-Implantaremos um aplicativo nginx de amostra como um ReplicaSet de 1 pod.
+Implantaremos um aplicativo nginx de exemplo com um ReplicaSet de 1 pod.
 
 ```bash
 cat <<EoF> ~/environment/nginx.yaml
@@ -361,13 +361,13 @@ kubectl get deployment/nginx-to-scaleout
 kubectl scale --replicas=10 deployment/nginx-to-scaleout
 ```
 
-Alguns pods estarão no`Pending`state, que aciona o cluster-autoscaler para expandir a frota do EC2.
+Alguns pods estarão no estado `Pending`, que aciona o cluster-autoscaler para expandir a frota do EC2.
 
 ```bash
 kubectl get pods -l app=nginx -o wide --watch
 ```
 
-Verifica a [Console de gerenciamento EC2 AWS](https://console.aws.amazon.com/ec2/home?#Instances:sort=instanceId)para confirmar se os grupos do Auto Scaling estão aumentando para atender à demanda. Isso pode levar alguns minutos. Você também pode acompanhar a implantação do pod na linha de comando. Você deve ver a transição dos pods de pendente para execução à medida que os nós são ampliados.
+Verifique a [Console de gerenciamento EC2 AWS](https://console.aws.amazon.com/ec2/home?#Instances:sort=instanceId)para confirmar se os grupos do Auto Scaling estão aumentando para atender à demanda. Isso pode levar alguns minutos. Você também pode acompanhar a implantação do pod na linha de comando. Você deve ver a transição dos pods de pendente para execução à medida que os nós são criados.
 
 Ou verifique usando`kubectl`
 
@@ -385,7 +385,7 @@ ip-192-168-55-187.us-east-2.compute.internal   Ready    <none>   3d6h   v1.17.7-
 ip-192-168-82-113.us-east-2.compute.internal   Ready    <none>   8h     v1.17.7-eks-bffbac
 ```
 
-### Escalonamento de limpeza
+### Limpe o ambiente
 
 ```bash
 kubectl delete -f ~/environment/nginx.yaml
@@ -408,9 +408,9 @@ aws autoscaling \
 
 # Computação Flexível com Karpenter
 
-[Carpinteiro](https://karpenter.sh/)é um projeto de escalonamento automático de código aberto criado para Kubernetes. O Karpenter foi projetado para fornecer os recursos de computação certos para atender às necessidades do seu aplicativo em segundos, em vez de minutos, observando as solicitações de recursos agregados de pods não programáveis ​​e tomando decisões para iniciar e encerrar nós para minimizar as latências de agendamento.
+[Karpenter](https://karpenter.sh/)é um projeto de escalonamento automático de código aberto criado para Kubernetes. O Karpenter foi projetado para fornecer os recursos de computação certos para atender às necessidades do seu aplicativo em segundos, em vez de minutos, observando as solicitações de recursos agregados de pods não programáveis ​​e tomando decisões para iniciar e encerrar nós para minimizar as latências de agendamento.
 
-Vamos habilitar o Karpenter e desabilitar o Cluster Autoscaler em nosso cluster EKS usando o terraform. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf`E definir`enable_cluster_autoscale`a partir de`true`para`false`, também defina o`enable_karpenter`a partir de`false`para`true`:
+Vamos habilitar o Karpenter e desabilitar o Cluster Autoscaler em nosso cluster EKS usando o terraform. Abra o arquivo `latam-containers-roadshow/workshops/eks/terraform/main.tf` e altere o campo `enable_cluster_autoscale` de `true` para `false`, e também altere o atributo `enable_karpenter` de `false` para `true`:
 
 ```terraform
 module "eks_blueprints_kubernetes_addons" {
@@ -437,7 +437,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 ```
 
-Agora, diminua a capacidade máxima para 2 instâncias. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf`arquivo e atualize o`max_size`de 4 para 2, você terá seu manifesto assim:
+Agora, diminua a capacidade máxima para 2 instâncias. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf`arquivo e atualize o `max_size` de 4 para 2, você terá seu manifesto assim:
 
 ```terraform
 managed_node_groups = {
@@ -452,7 +452,7 @@ managed_node_groups = {
   }
 ```
 
-### Executar o PLANO do Terraform
+### Execute o PLAN do Terraform
 
 Verifique os recursos criados por esta execução
 
@@ -473,7 +473,7 @@ Fazer isso removerá o Cluster Autoscaler e todos os recursos relacionados do no
 
 ## Configurar o Provisionador
 
-A configuração do Karpenter vem na forma de um Provisioner CRD (Custom Resource Definition). Um único provisionador Karpenter é capaz de lidar com vários formatos de pods diferentes. O Karpenter toma decisões de agendamento e provisionamento com base em atributos de pod, como rótulos e afinidade. Um cluster pode ter mais de um Provisioner, mas no momento vamos declarar apenas um: o Provisioner padrão.
+A configuração do Karpenter vem na forma de um Provisioner CRD (Custom Resource Definition). Um único provisionador Karpenter é capaz de lidar com vários formatos de pods diferentes. O Karpenter toma decisões de agendamento e provisionamento com base em atributos de pod, como labels e afinidade. Um cluster pode ter mais de um Provisioner, mas no momento vamos declarar apenas um: o Provisioner padrão.
 
 Um dos principais objetivos da Karpenter é simplificar a gestão da capacidade. Se você estiver familiarizado com outros Auto Scalers, notará que o Karpenter adota uma abordagem diferente. Você pode ter ouvido a abordagem referida como dimensionamento automático sem grupo. Outras soluções têm tradicionalmente usado o conceito de um grupo de nós como o elemento de controle que define as características da capacidade fornecida (ou seja: On-Demand, EC2 Spot, GPU Nodes, etc) e que controla a escala desejada do grupo no conjunto. Na AWS, a implementação de um grupo de nós corresponde a [Grupos de Auto Scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroup.html). Com o tempo, os clusters que usam esse paradigma, que executam diferentes tipos de aplicativos que exigem diferentes tipos de capacidade, acabam com uma configuração e um modelo operacional complexos, onde os grupos de nós devem ser definidos e fornecidos com antecedência.
 
@@ -512,13 +512,13 @@ EOF
 kubectl apply -f ~/environment/provisioner.yaml
 ```
 
-A configuração para este provedor é bastante simples. Por enquanto, vamos nos concentrar em algumas das configurações usadas.
+A configuração para este provisionador é bastante simples. Por enquanto, vamos nos concentrar em algumas das configurações usadas.
 
-**Seção de Requisitos:** o [Comissões CRD](https://karpenter.sh/docs/provisioner-crd/)suporta a definição de propriedades de nó como tipo de instância e zona. Por exemplo, em resposta a um rótulo de`topology.kubernetes.io/zone=us-east-1c`, o Karpenter provisionará nós nessa zona de disponibilidade. Neste exemplo estamos configurando o`karpenter.sh/capacity-type`para pesquisar instâncias spot do EC2. Você pode saber quais outras propriedades são [disponivel aqui](https://karpenter.sh/v0.7.2/aws/provisioning/).
+**Seção de Requisitos:** o [Provisioner CRD](https://karpenter.sh/docs/provisioner-crd/)suporta a definição de propriedades de nó como tipo de instância e zona. Por exemplo, em resposta a um label de `topology.kubernetes.io/zone=us-east-1c`, o Karpenter provisionará nós nessa zona de disponibilidade. Neste exemplo estamos configurando o`karpenter.sh/capacity-type` para pesquisar instâncias Spot do EC2. Você pode saber quais outras propriedades estão [disponíveis aqui](https://karpenter.sh/v0.7.2/aws/provisioning/).
 
 **Seção de limites:** Os provisionadores podem definir um limite no número de CPUs e memória alocados para esse provisionador específico e parte do cluster.
 
-**Seção do provedor:** Este provedor usa`securityGroupSelector`e subnetSelector para descobrir recursos usados ​​para iniciar nós. Ele usa as tags que o Karpenter anexou às sub-redes.
+**Seção do provisioner:** Este provisioner usa `securityGroupSelector` e subnetSelector para descobrir recursos usados ​​para iniciar nós. Ele usa as tags que o Karpenter anexou às sub-redes.
 
 **ttlSecondsAfterEmpty:** configura o Karpenter para encerrar nós vazios. Este comportamento pode ser desabilitado deixando o valor indefinido. Neste caso, configuramos para uma demonstração rápida um valor de 30 segundos.
 
@@ -578,13 +578,13 @@ kubectl get pods
 
 Observe que 2 pods estão com status`Pending`. O motivo é que o cluster não possui nenhum nó disponível exigido pela solicitação de recurso do pod.
 
-Karpenter está monitorando o cluster e provisionando um novo nó. Observe a criação do nó até que o status seja`Ready`:
+Karpenter está monitorando o cluster e provisionando um novo nó. Observe a criação do nó até que o status seja `Ready`:
 
 ```bash
 watch kubectl get nodes
 ```
 
-Quando o novo nó é`Ready`, liste os pods para validar se o aplicativo está em execução:
+Quando o novo nó estiver `Ready`, liste os pods para validar se o aplicativo está em execução:
 
 ```bash
 kubectl get pods
@@ -606,11 +606,11 @@ watch kubectl get nodes
 
 ## Implantar um aplicativo baseado em ARM
 
-Quando um provisionador não especifica a arquitetura e também os tipos de instância em que pode criar novos nós, por padrão todas as instâncias e todas as arquiteturas (amd64 e arm64) serão usadas. Isso significa que um  [Gravidade](https://aws.amazon.com/pm/ec2-graviton/)instância pode ser criada e, com isso, a aplicação a ser executada pode não suportar a arquitetura da instância, o que pode causar erros em tempo de execução.
+Quando um provisionador não especifica a arquitetura e também os tipos de instância em que pode criar novos nós, por padrão todas as instâncias e todas as arquiteturas (amd64 e arm64) serão usadas. Isso significa que uma instância  [Graviton](https://aws.amazon.com/pm/ec2-graviton/) pode ser criada e, com isso, a aplicação a ser executada pode não suportar a arquitetura da instância, o que pode causar erros em tempo de execução.
 
-É possível utilizar [rótulo conhecido](https://kubernetes.io/docs/reference/labels-annotations-taints/)kubernetes.io/arch no manifesto do aplicativo com um_seletor de nó_. Dessa forma, o Karpenter levará em consideração o seletor e provisionará o nó específico para esse caso de uso.
+É possível utilizar o [label conhecido](https://kubernetes.io/docs/reference/labels-annotations-taints/)kubernetes.io/arch no manifesto do aplicativo com um_seletor de nó_. Dessa forma, o Karpenter levará em consideração o seletor e provisionará o nó específico para esse caso de uso.
 
-Vamos providenciar um`arm`aplicação com um`arm64`seletor de nó:
+Vamos implantar uma aplicação `arm` com um seletor de nó `arm64`:
 
 ```bash
 cat <<EoF> ~/environment/karpenter-arm64.yaml
@@ -660,26 +660,26 @@ Karpenter está monitorando o cluster e provisionando um novo nó. Observe a cri
 watch kubectl get nodes
 ```
 
-Uma vez que o nó`Ready`, vamos obter o nome do nó que o Pod está executando:
+Uma vez que o nó esteja `Ready`, vamos obter o nome do nó que o Pod está executando:
 
 ```bash
 export ARM_NODE=$(kubectl get pods -owide | awk '{print $7}' | grep -vi node)
 ```
 
-Agora vamos verificar os rótulos do Node, com os rótulos podemos ver se o nó foi provisionado na arquitetura correta.
+Agora vamos verificar os labels do Node, com os labels podemos ver se o nó foi provisionado na arquitetura correta.
 
 ```bash
 kubectl get node $ARM_NODE --show-labels
 ```
 
-O resultado terá a seguinte aparência:
+O resultado será parecido com o abaixo:
 
 ```output
 NAME                          STATUS   ROLES    AGE   VERSION                LABELS
 ip-10-0-11-211.ec2.internal   Ready    <none>   15m   v1.21.12-eks-5308cf7   beta.kubernetes.io/arch=arm64,beta.kubernetes.io/instance-type=t4g.small,beta.kubernetes.io/os=linux,failure-domain.beta.kubernetes.io/region=us-east-1,failure-domain.beta.kubernetes.io/zone=us-east-1b,intent=apps,karpenter.sh/capacity-type=spot,karpenter.sh/provisioner-name=default,kubernetes.io/arch=arm64,kubernetes.io/hostname=ip-10-0-11-211.ec2.internal,kubernetes.io/os=linux,node.kubernetes.io/instance-type=t4g.small,topology.kubernetes.io/region=us-east-1,topology.kubernetes.io/zone=us-east-1b
 ```
 
-Como você pode ver este Node tem o rótulo`kubernetes.io/arch=arm64`, mostrando que é um nó de braço alimentado por Graviton.
+Como você pode ver este Node tem o label `kubernetes.io/arch=arm64`, mostrando que é um nó com processador por Graviton.
 
 ## Desimplantar o aplicativo ARM
 
@@ -695,7 +695,7 @@ watch kubectl get nodes
 
 ## Desimplantar o Karpenter
 
-Vamos desabilitar o Karpenter em nosso cluster EKS usando o terraform. Abra o`latam-containers-roadshow/workshops/eks/terraform/main.tf` e definir `enable_karpenter`a partir de`true`para`false`:
+Vamos desabilitar o Karpenter em nosso cluster EKS usando o terraform. Abra o arquivo `latam-containers-roadshow/workshops/eks/terraform/main.tf` e altere a propriedade `enable_karpenter` de `true` para`false`:
 
 ```terraform
 module "eks_blueprints_kubernetes_addons" {
@@ -722,7 +722,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 ```
 
-### Executar o PLANO do Terraform
+### Execute o PLAN do Terraform
 
 Verifique os recursos criados por esta execução
 
@@ -747,7 +747,7 @@ Neste módulo, aprenderemos e aproveitaremos o novo CloudWatch Container Insight
 
 Você pode usar o CloudWatch Container Insights para coletar, agregar e resumir métricas e logs de seus aplicativos e microsserviços em contêiner. O Container Insights está disponível para plataformas Amazon Elastic Container Service, Amazon Elastic Kubernetes Service e Kubernetes no Amazon EC2. As métricas incluem a utilização de recursos como CPU, memória, disco e rede. O Container Insights também fornece informações de diagnóstico, como falhas de reinicialização de contêiner, para ajudá-lo a isolar problemas e resolvê-los rapidamente.
 
-Vamos primeiro habilitar os complementos CloudWatch e Fluent-bit em`latam-containers-roadshow/workshops/eks/terraform/main.tf`, coloque a bandeira`enable_aws_cloudwatch_metrics`a partir de`false`para`true`, a bandeira`enable_aws_for_fluentbit`a partir de`false`para`true`e a bandeira`enable_karpenter`a partir de`true`para`false`:
+Vamos primeiro habilitar os complementos CloudWatch e Fluent-bit no arquivo `latam-containers-roadshow/workshops/eks/terraform/main.tf`. Altere o atributo  `enable_aws_cloudwatch_metrics` `false` para `true`, o atributo `enable_aws_for_fluentbit` de `false`para`true` e o atributo `enable_karpenter` de `true`para`false`:
 
 ```terraform
 module "eks_blueprints_kubernetes_addons" {
@@ -774,7 +774,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 ```
 
-### Executar o PLANO do Terraform
+### Executar o PLAN do Terraform
 
 Verifique os recursos criados por esta execução
 
@@ -791,7 +791,7 @@ para criar recursos
 terraform apply --auto-approve
 ```
 
-Fazer isso criará o`amazon-cloudwatch`namespace em nosso cluster com os recursos do Container Insights e o`logging`namespace com os recursos de bits fluentes.
+Fazer isso criará o `amazon-cloudwatch` namespace em nosso cluster com os recursos do Container Insights e o `logging` namespace com os recursos de bits fluentes.
 
 ## Verifique se o CloudWatch Container Insights está funcionando
 
@@ -825,7 +825,7 @@ Neste caso selecionamos o Karpenter, após clicar no Karpenter será apresentado
 <img src="../static/karpenter-metrics.png">
 </p>
 
-Para verificar os logs, role a página para baixo e sob`Pod performance`, selecione os`karpenter-xxx`debaixo:
+Para verificar os logs, role a página para baixo e sob `Pod performance`, selecione os`karpenter-xxx`debaixo:
 
 <p align="center"> 
 <img src="../static/karpenter-pod.png">
@@ -839,13 +839,13 @@ Em seguida, clique em`Actions`>`View application logs`e clique em`Run query`:
 
 Pronto, agora podemos ver os logs gerados pelo pod do aplicativo Karpenter.
 
-# GitOps com fluxo
+# GitOps com Flux
 
-GitOps, um termo cunhado por[Tecelagem](https://www.weave.works/), é uma forma de fazer[entrega contínua](https://aws.amazon.com/devops/continuous-delivery/). O Git é usado como fonte única de verdade para implantação em seu cluster.**Isso é fácil para uma equipe de desenvolvimento, pois eles já estão familiarizados com o git e não precisam conhecer outras ferramentas.**
+GitOps, um termo cunhado pela [Weave](https://www.weave.works/), é uma forma de fazer[entrega contínua](https://aws.amazon.com/devops/continuous-delivery/). O Git é usado como fonte única de verdade para implantação em seu cluster.**Isso é fácil para uma equipe de desenvolvimento, pois eles já estão familiarizados com o git e não precisam conhecer outras ferramentas.**
 
-Neste módulo do workshop vamos configurar[CD de fluxo](https://fluxcd.io)em nosso cluster EKS e implemente um aplicativo de amostra usando o Flux.
+Neste módulo do workshop vamos configurar o [CD do Flux](https://fluxcd.io) em nosso cluster EKS e implementar um aplicativo de exemplo usando o Flux.
 
-1.  Fork este repositório do GitHub para sua conta do GitHub. Se você não tiver uma conta do GitHub, crie uma usando[esse link](https://github.com/).
+1.  Faça o Fork do repositório do GitHub para sua conta do GitHub. Se você não tiver uma conta do GitHub, crie uma usando[esse link](https://github.com/).
 
 <p align="center"> 
 <img src="../static/fork-github.png">
@@ -883,7 +883,7 @@ A saída é semelhante a:
 ✔ prerequisites checks passed
 ```
 
-5.  Bootstrap, usando o`flux bootstrap`comando você pode instalar o Flux em um cluster Kubernetes e configurá-lo para se gerenciar a partir de um repositório Git.
+5.  Faça o Bootstrap, usando o comando `flux bootstrap` você pode instalar o Flux em um cluster Kubernetes e configurá-lo para se gerenciar a partir de um repositório Git.
 
 ```bash
 flux bootstrap github \
@@ -948,11 +948,11 @@ kustomization/flux-system       main/2b3ef06    False           True    Applied 
 kustomization/infrastructure                    False           False   kustomization path not found: stat /tmp/kustomization-1526705579/infrastructure: no such file or directory
 ```
 
-## Estrutura do repositório de fluxo
+## Estrutura do repositório do Flux
 
-Usos de fluxo [Kustomize Controller](https://fluxcd.io/docs/components/kustomize/) para fazer referência a manifestos no repositório.
+Use o [Kustomize Controller](https://fluxcd.io/docs/components/kustomize/) para fazer referência a manifestos no repositório.
 
-Um objeto Kustomization define a origem dos manifestos do Kubernetes fazendo referência a um objeto gerenciado por [controlador de origem](https://github.com/fluxcd/source-controller), o caminho para o arquivo Kustomization dentro dessa origem e o intervalo no qual a saída da compilação kustomize é aplicada no cluster.
+Um objeto Kustomization define a origem dos manifestos do Kubernetes fazendo referência a um objeto gerenciado pelo [controlador de origem](https://github.com/fluxcd/source-controller), o caminho para o arquivo Kustomization dentro dessa origem e o intervalo no qual a saída da compilação kustomize é aplicada no cluster.
 
 ```output
 ├── apps
@@ -980,11 +980,11 @@ Um objeto Kustomization define a origem dos manifestos do Kubernetes fazendo ref
         └── kustomization.yaml
 ```
 
-**apps:** A pasta onde vamos criar nossos manifestos de aplicação para implantação de fluxo.
+**apps:** A pasta onde vamos criar nossos manifestos de aplicação para implantação do Flux.
 
 **infrastructure:** Pasta onde colocaremos seus complementos e manifestos de componentes de infraestrutura.
 
-**clusters/meu-cluster:** Pasta onde o fluxo coloca os arquivos bootstrap apontando para o nosso`Kustomizations manifests`.
+**clusters/meu-cluster:** Pasta onde o Flux coloca os arquivos bootstrap apontando para o nosso`Kustomizations manifests`.
 
 ### Manifesto de exemplo de customização
 
@@ -1002,7 +1002,7 @@ Como você pode ver acima, o objeto Kustomization é responsável por referencia
 
 ## Alterando um manifesto de aplicativo existente
 
-Vamos alterar o`replicaCount`no aplicativo nginx que foi implantado pelo flux.
+Vamos alterar o `replicaCount`no aplicativo nginx que foi implantado pelo flux.
 
 1.  Verifique quantas réplicas existem em`app1`namespace com o comando abaixo:
 
@@ -1082,7 +1082,7 @@ NAME                              READY   STATUS    RESTARTS   AGE
 app1-hello-world-b75b989b-tgf5z   1/1     Running   0          22m
 ```
 
-O fluxo fez o**loop de reconciliação e garante o estado**que mudamos em nosso`app1`manifesto do aplicativo.
+O Flux fez o **loop de reconciliação e garante o estado**que mudamos em nosso`app1`manifesto do aplicativo.
 
 ## Criando um novo aplicativo e implantando-o usando o Flux
 
@@ -1251,7 +1251,7 @@ Em seguida, abra-o no navegador, se tudo correu bem, você poderá ver o exemplo
 
 # Limpando os recursos
 
-## Executar Destruir Terraform
+## Executar Terraform Destroy
 
 ```bash
 cd latam-containers-roadshow/workshops/eks/terraform/
