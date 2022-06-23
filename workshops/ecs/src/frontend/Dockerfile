@@ -1,4 +1,4 @@
-FROM public.ecr.aws/bitnami/node:14 AS builder 
+FROM public.ecr.aws/bitnami/node:16 AS builder 
 RUN mkdir -p webapp 
 WORKDIR /webapp 
 COPY webapp/package.json /webapp 
