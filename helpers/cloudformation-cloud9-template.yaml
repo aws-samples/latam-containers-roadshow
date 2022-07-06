@@ -316,6 +316,10 @@ Resources:
             - . /home/ec2-user/.bashrc
             - echo '=== UPDATE system packages and INSTALL dependencies ==='
             - yum update -y; yum install -y vim git jq bash-completion moreutils gettext yum-utils perl-Digest-SHA tree
+            - echo '=== ENABLE Amazon Extras EPEL Repository and INSTALL Git LFS ==='
+            - yum install -y amazon-linux-extras
+            - amazon-linux-extras install epel -y
+            - yum install -y git-lfs
             - echo '=== INSTALL AWS CLI v2 ==='
             - curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
             - unzip awscliv2.zip -d /tmp
