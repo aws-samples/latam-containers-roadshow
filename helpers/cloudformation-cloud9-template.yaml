@@ -11,12 +11,11 @@ Parameters:
   C9InstanceType:
     Description: AWS Cloud9 instance type
     Type: String
-    Default: t3.small
+    Default: t3.medium
     AllowedValues:
-      - t2.micro
-      - t3.micro
-      - t3.small
       - t3.medium
+      - t3.large
+      - t3.xlarge
     ConstraintDescription: Must be a valid Cloud9 instance type
   C9EnvType: 
     Description: Environment type.
