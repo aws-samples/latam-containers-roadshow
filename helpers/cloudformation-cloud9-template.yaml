@@ -11,12 +11,11 @@ Parameters:
   C9InstanceType:
     Description: AWS Cloud9 instance type
     Type: String
-    Default: t3.small
+    Default: t3.medium
     AllowedValues:
-      - t2.micro
-      - t3.micro
-      - t3.small
       - t3.medium
+      - t3.large
+      - t3.xlarge
     ConstraintDescription: Must be a valid Cloud9 instance type
   C9EnvType: 
     Description: Environment type.
@@ -316,34 +315,38 @@ Resources:
             - . /home/ec2-user/.bashrc
             - echo '=== UPDATE system packages and INSTALL dependencies ==='
             - yum update -y; yum install -y vim git jq bash-completion moreutils gettext yum-utils perl-Digest-SHA tree
+            - echo '=== ENABLE Amazon Extras EPEL Repository and INSTALL Git LFS ==='
+            - yum install -y amazon-linux-extras
+            - amazon-linux-extras install epel -y
+            - yum install -y git-lfs
             - echo '=== INSTALL AWS CLI v2 ==='
             - curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
             - unzip awscliv2.zip -d /tmp
-            - sudo /tmp/aws/install --update
+            - /tmp/aws/install --update
             - rm -rf aws awscliv2.zip
             - echo '=== INSTALL Copilot CLI ==='
             - curl -Lo /tmp/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux
-            - sudo chmod +x /tmp/copilot && sudo mv /tmp/copilot /usr/local/bin/copilot
-            - sudo sh -c '/usr/local/bin/copilot completion bash > /etc/bash_completion.d/copilot'
+            - chmod +x /tmp/copilot && mv /tmp/copilot /usr/local/bin/copilot
+            - /usr/local/bin/copilot completion bash > /etc/bash_completion.d/copilot
             - echo '=== INSTALL Kubernetes CLI ==='
             - curl -o /tmp/kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.6/2022-03-09/bin/linux/amd64/kubectl
-            - sudo chmod +x /tmp/kubectl && sudo mv /tmp/kubectl /usr/local/bin/
-            - sudo sh -c '/usr/local/bin/kubectl completion bash > /etc/bash_completion.d/kubectl'
+            - chmod +x /tmp/kubectl && mv /tmp/kubectl /usr/local/bin/
+            - /usr/local/bin/kubectl completion bash > /etc/bash_completion.d/kubectl
             - echo '=== INSTALL Helm CLI ==='
             - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-            - sudo sh -c '/usr/local/bin/helm completion bash > /etc/bash_completion.d/helm'
+            - /usr/local/bin/helm completion bash > /etc/bash_completion.d/helm
             - echo '=== INSTALL Eksctl CLI ==='
             - curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-            - sudo mv /tmp/eksctl /usr/local/bin
-            - sudo sh -c '/usr/local/bin/eksctl completion bash > /etc/bash_completion.d/eksctl'
+            - mv /tmp/eksctl /usr/local/bin
+            - /usr/local/bin/eksctl completion bash > /etc/bash_completion.d/eksctl
             - echo '=== INSTALL Flux CLI ==='
-            - curl -s https://fluxcd.io/install.sh | sudo bash
-            - sudo sh -c '/usr/local/bin/flux completion bash > /etc/bash_completion.d/flux'
+            - curl -s https://fluxcd.io/install.sh | bash
+            - /usr/local/bin/flux completion bash > /etc/bash_completion.d/flux
             - echo '=== INSTALL Terraform CLI ==='
-            - sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-            - sudo yum -y install terraform
+            - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+            - yum -y install terraform
             - echo "Bootstrap completed with return code $?"
-            - sudo shutdown -r +1
+            - shutdown -r +1
 
   C9BootstrapAssociation: 
     Type: AWS::SSM::Association
