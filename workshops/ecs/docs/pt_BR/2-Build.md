@@ -64,7 +64,13 @@ Use as seguintes respostas:
 
 ![Captura de tela com o resultado do comando 'copilot env init'](../static/2.5-copilot_dev_env_init.png)
 
-7. Ao criar o nosso ambiente o AWS Copilot voltou a provisionar recursos através do AWS CloudFormation, dentre eles uma Virtual Private Cloud (VPC), Subnets e nosso cluster de Amazon ECS. Não foram criadas instâncias de Amazon EC2 pois o AWS Copilot usa o AWS Fargate como motor de execução serverless para os nossos containers.
+7. Ao criar o nosso ambiente agora precisamos fazer o deploy do mesmo, vamos executar o seguinte comando:
+
+```bash
+copilot env deploy --name development
+```
+
+Ao executá-lo o AWS Copilot volta a provisionar recursos através do AWS CloudFormation, dentre eles uma Virtual Private Cloud (VPC), Subnets e nosso cluster de Amazon ECS. Não foram criadas instâncias de Amazon EC2 pois o AWS Copilot usa o AWS Fargate como motor de execução serverless para os nossos containers.
 
 ![Imagem animada com as saídas do AWS CloudFormation](../static/2.6-stacks_cloudformation.gif)
 
@@ -72,6 +78,10 @@ Use as seguintes respostas:
 
 ```bash
 copilot env init --app todo --name production --container-insights --default-config --prod --profile default
+```
+
+```bash
+copilot env deploy --name production
 ```
 
 ![Captura de tela com o resultado do segundo comando 'copilot env init'](../static/2.7-copilot_prod_env_init.png)
